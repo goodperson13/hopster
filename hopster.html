@@ -509,6 +509,7 @@
             🪙 <span id="walletCoins">0</span>
         </div>
         <div id="levelCoinHud" style="font-size:20px;color:#ffd93d;margin-top:4px;text-shadow:2px 2px 6px rgba(0,0,0,0.8);background:rgba(0,0,0,0.3);padding:3px 14px;border-radius:20px;display:inline-block;display:none;">🪙 <span id="lcHudCount">0</span> / <span id="lcHudTotal">0</span></div>
+        <div id="levelTimer" style="display:inline-block;margin-left:12px;color:#fff;font-size:14px;font-weight:bold;text-shadow:0 1px 3px #000;vertical-align:middle;"></div>
     </div>
 
     <!-- FPS counter — shown during gameplay -->
@@ -563,6 +564,7 @@
         <div id="lcStars" style="display:flex;gap:20px;justify-content:center;margin-bottom:28px;font-size:60px;"></div>
         <div id="lcCoins" style="font-size:24px;color:#ffd93d;margin-bottom:12px;font-weight:bold;"></div>
         <div id="lcCoinsAdded" style="font-size:18px;color:#aaffaa;margin-bottom:36px;"></div>
+        <div id="lcTime" style="font-size:14px;color:#aef;margin-bottom:36px;"></div>
         <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
           <button id="lcNextBtn" style="padding:16px 40px;font-size:20px;font-weight:bold;background:linear-gradient(135deg,#2ecc71,#27ae60);color:white;border:none;border-radius:10px;cursor:pointer;">NEXT LEVEL →</button>
           <button id="lcRetryBtn" style="padding:16px 40px;font-size:20px;font-weight:bold;background:#3498db;color:white;border:none;border-radius:10px;cursor:pointer;">RETRY</button>
@@ -1208,6 +1210,10 @@
             levelCoins: [],
             isLevelMode: true,
             levelFinishZ: -99,
+            levelStartTime: 0,
+            levelElapsed: 0,
+            levelTimerRunning: false,
+            particles: [],
         };
 
         // ============================================================================
@@ -2448,6 +2454,10 @@
 
             gameState.isGliding = floaterInWater;
             gameState.hopStartedFromWater = floaterInWater; // track so frog can't swim onto a log
+            if (gameState.isLevelMode && !gameState.levelTimerRunning) {
+                gameState.levelTimerRunning = true;
+                gameState.levelStartTime = Date.now();
+            }
             gameState.playerIsHopping = true;
             gameState.hopStartTime = Date.now();
             gameState.hopStartPos = { x: player.position.x, y: player.position.y, z: player.position.z };
@@ -2466,6 +2476,7 @@
                         gameState.coinsCollected++;
                         updateLevelCoinHud();
                         playCoinSound();
+                        spawnCoinParticles(coin.position.x, coin.position.y, coin.position.z);
                     }
                 });
             }
@@ -2975,6 +2986,7 @@
         }
 
         function showLevelComplete(levelIndex, coinsCollected) {
+            gameState.levelTimerRunning = false;
             const lvl = LEVELS[levelIndex];
             const total = lvl.coins.length;
             const earned = _calcStars(coinsCollected, levelIndex);
@@ -3017,6 +3029,22 @@
             document.getElementById('lcCoins').textContent = `🪙 ${coinsCollected} / ${total} coins collected`;
             document.getElementById('lcCoinsAdded').textContent = coinsCollected > 0 ? `+${coinsCollected} added to your wallet!` : '';
 
+            // Best time tracking
+            const elapsed = gameState.levelElapsed;
+            const key = 'hopsterBestTimes';
+            let bestTimes = {};
+            try { bestTimes = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+            const prev = bestTimes[String(levelIndex)];
+            const isNewBest = !prev || elapsed < prev;
+            if (isNewBest) {
+                bestTimes[String(levelIndex)] = elapsed;
+                try { localStorage.setItem(key, JSON.stringify(bestTimes)); } catch(e) {}
+            }
+            const timeEl = document.getElementById('lcTime');
+            if (timeEl) {
+                timeEl.textContent = `⏱ ${elapsed.toFixed(1)}s` + (isNewBest && prev ? '  🏆 New best!' : prev ? `  (best: ${prev.toFixed(1)}s)` : '  🏆 First clear!');
+            }
+
             const isLast = levelIndex >= LEVELS.length - 1;
             const nextBtn = document.getElementById('lcNextBtn');
             nextBtn.textContent = isLast ? '🏠 MAIN MENU' : 'NEXT LEVEL →';
@@ -3032,6 +3060,25 @@
         }
 
         // ── Coin system ───────────────────────────────────────────────────────────
+        function spawnCoinParticles(x, y, z) {
+            const count = 12;
+            const mat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 1.0 });
+            for (let i = 0; i < count; i++) {
+                const geom = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+                const mesh = new THREE.Mesh(geom, mat.clone());
+                mesh.position.set(x, y, z);
+                const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+                const speed = 2.5 + Math.random() * 2.5;
+                mesh.userData.vx = Math.cos(angle) * speed;
+                mesh.userData.vy = 2.0 + Math.random() * 2.0;
+                mesh.userData.vz = Math.sin(angle) * speed;
+                mesh.userData.life = 1.0;
+                mesh.userData.decay = 1.4 + Math.random() * 0.8;
+                scene.add(mesh);
+                gameState.particles.push(mesh);
+            }
+        }
+
         function createLevelCoins(levelData) {
             let placed = 0;
             const permanent = _getCollectedCoins(gameState.currentLevel);
@@ -3254,8 +3301,17 @@
             applyLevelTheme(gameState.isLevelMode ? gameState.currentLevel : undefined);
             if (gameState.isLevelMode) _seedRand(gameState.currentLevel * 999983 + 12345);
             gameState.coinsCollected = 0;
+            gameState.levelStartTime = 0;
+            gameState.levelElapsed = 0;
+            gameState.levelTimerRunning = false;
+            const timerEl = document.getElementById('levelTimer');
+            if (timerEl) timerEl.textContent = '';
             gameState.levelCoins.forEach(c => scene.remove(c));
             gameState.levelCoins = [];
+            if (gameState.particles) {
+                gameState.particles.forEach(p => scene.remove(p));
+                gameState.particles = [];
+            }
             if (player) player.visible = true;
             camera.fov = 50;
             camera.updateProjectionMatrix();
@@ -3944,6 +4000,34 @@
                         coin.rotation.z += 0.04;
                     }
                 });
+            }
+
+            // Update level timer
+            if (gameState.isLevelMode && gameState.levelTimerRunning) {
+                gameState.levelElapsed = (Date.now() - gameState.levelStartTime) / 1000;
+                const timerEl = document.getElementById('levelTimer');
+                if (timerEl) timerEl.textContent = gameState.levelElapsed.toFixed(1) + 's';
+            }
+
+            // Update particles
+            if (gameState.particles && gameState.particles.length > 0) {
+                const dt = Math.min(deltaTime, 0.05);
+                for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                    const p = gameState.particles[i];
+                    p.userData.life -= p.userData.decay * dt;
+                    if (p.userData.life <= 0) {
+                        scene.remove(p);
+                        gameState.particles.splice(i, 1);
+                    } else {
+                        p.position.x += p.userData.vx * dt;
+                        p.position.y += p.userData.vy * dt;
+                        p.position.z += p.userData.vz * dt;
+                        p.userData.vy -= 6 * dt; // gravity
+                        p.material.opacity = p.userData.life;
+                        p.rotation.x += 3 * dt;
+                        p.rotation.z += 2 * dt;
+                    }
+                }
             }
 
             renderer.render(scene, camera);

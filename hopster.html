@@ -509,7 +509,7 @@
             🪙 <span id="walletCoins">0</span>
         </div>
         <div id="levelCoinHud" style="font-size:20px;color:#ffd93d;margin-top:4px;text-shadow:2px 2px 6px rgba(0,0,0,0.8);background:rgba(0,0,0,0.3);padding:3px 14px;border-radius:20px;display:inline-block;display:none;">🪙 <span id="lcHudCount">0</span> / <span id="lcHudTotal">0</span></div>
-        <div id="levelTimer" style="display:inline-block;margin-left:12px;color:#fff;font-size:14px;font-weight:bold;text-shadow:0 1px 3px #000;vertical-align:middle;"></div>
+        <div id="levelTimer" style="display:block;margin-top:6px;color:#fff;font-size:22px;font-weight:bold;text-shadow:0 2px 6px #000;background:rgba(0,0,0,0.35);padding:2px 14px;border-radius:16px;display:inline-block;letter-spacing:1px;"></div>
         <button id="hudSoundBtn" onclick="(function(){const s=document.getElementById('sfxBtn');if(s)s.click();const b=document.getElementById('hudSoundBtn');b.textContent=b.textContent==='🔊'?'🔇':'🔊';})()" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.45);border:none;border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;line-height:38px;text-align:center;z-index:999;">🔊</button>
     </div>
 
@@ -3992,13 +3992,25 @@
                 }
             }
 
-            // Animate level coins
+            // Animate level coins + collect while riding logs
             if (gameState.isLevelMode && gameState.levelCoins) {
                 const ct = Date.now() * 0.002;
+                const px = player ? player.position.x : gameState.playerPos.x;
+                const pz = gameState.playerPos.z;
                 gameState.levelCoins.forEach(coin => {
                     if (!coin.userData.collected) {
                         coin.position.y = coin.userData.baseY + Math.sin(ct + coin.userData.waveOffset) * 0.08;
                         coin.rotation.z += 0.04;
+                        // Collect if player drifts into coin (e.g. riding a log)
+                        if (Math.abs(coin.position.x - px) < 0.7 &&
+                            Math.abs(coin.position.z - pz) < 0.7) {
+                            coin.userData.collected = true;
+                            coin.visible = false;
+                            gameState.coinsCollected++;
+                            updateLevelCoinHud();
+                            playCoinSound();
+                            spawnCoinParticles(coin.position.x, coin.position.y, coin.position.z);
+                        }
                     }
                 });
             }

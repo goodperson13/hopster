@@ -3183,12 +3183,13 @@
 
         function showLevelSelect() {
             const unlocked = _getUnlockedLevels();
-            const stars    = _getLevelStars();
             const grid = document.getElementById('levelGrid');
             grid.innerHTML = '';
             LEVELS.forEach((lvl, i) => {
                 const isUnlocked = unlocked.includes(i);
-                const s = stars[i] || 0;
+                // Always recalculate from saved coin data so stars reflect cumulative progress
+                const collectedCount = _getCollectedCoins(i).size;
+                const s = _calcStars(collectedCount, i);
                 const card = document.createElement('div');
                 card.className = 'lvlCard' + (isUnlocked ? '' : ' lvlLocked');
                 card.innerHTML = `

@@ -1202,6 +1202,7 @@
             lanes: [],
             cars: [],
             logs: [],
+            animals: [],
             nextLaneIndex: 0,   // persistent counter so removal doesn't break gen
             lastLaneType: null,
             firstPerson: false,
@@ -2114,6 +2115,121 @@
             return group;
         }
 
+        // ── Helper: is the current theme a city/urban level? ──────────────────────
+        function _isCityTheme() {
+            if (!_currentTheme) return false;
+            const f = _currentTheme.fog;
+            return f === 0x8899aa || f === 0x0a0a2a || f === 0x221122;
+        }
+
+        // ── Fox patrol animal ──────────────────────────────────────────────────────
+        function _buildFox(x, z) {
+            const g = new THREE.Group();
+            const or = new THREE.MeshStandardMaterial({ color: 0xcc5500, roughness: 0.8 });
+            const wh = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.8 });
+            const bl = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.28, 0.32), or);
+            body.position.y = 0.44; g.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.25), or);
+            head.position.set(0.28, 0.64, 0); g.add(head);
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.16),
+                new THREE.MeshStandardMaterial({ color: 0xddaa88, roughness: 0.8 }));
+            snout.position.set(0.4, 0.56, 0); g.add(snout);
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 5, 4), bl);
+            nose.position.set(0.5, 0.59, 0); g.add(nose);
+            [-0.08, 0.08].forEach(ez => {
+                const ear = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 4), or);
+                ear.position.set(0.22, 0.8, ez); g.add(ear);
+            });
+            const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.10, 0.42, 6), or);
+            tail.rotation.z = 1.1; tail.position.set(-0.34, 0.55, 0); g.add(tail);
+            const tip = new THREE.Mesh(new THREE.SphereGeometry(0.10, 6, 5), wh);
+            tip.position.set(-0.52, 0.72, 0); g.add(tip);
+            [[-0.14, 0.11], [-0.14, -0.11], [0.14, 0.11], [0.14, -0.11]].forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.20, 0.07), or);
+                leg.position.set(lx, 0.10, lz); g.add(leg);
+            });
+            g.castShadow = true;
+            g.position.set(x, 0, z);
+            return g;
+        }
+
+        // ── Fallen tree obstacle ───────────────────────────────────────────────────
+        function _buildFallenTree(x, z, halfW) {
+            const g = new THREE.Group();
+            const tk = new THREE.MeshStandardMaterial({ color: 0x4a2c0a, roughness: 0.95 });
+            const bark = new THREE.MeshStandardMaterial({ color: 0x5a3510, roughness: 0.98 });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, halfW * 2, 8), tk);
+            trunk.rotation.z = Math.PI / 2;
+            trunk.position.y = 0.45; trunk.castShadow = true; g.add(trunk);
+            const roots = new THREE.Mesh(new THREE.SphereGeometry(0.38, 6, 5), bark);
+            roots.scale.set(0.55, 1.0, 0.7);
+            roots.position.set(-halfW * 0.9, 0.45, 0); g.add(roots);
+            [halfW * 0.2, -halfW * 0.1].forEach(bx => {
+                const br = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.55, 6), tk);
+                br.rotation.x = 0.7; br.position.set(bx, 0.62, 0); g.add(br);
+            });
+            g.position.set(x, 0, z);
+            return g;
+        }
+
+        // ── Urban construction barrier ─────────────────────────────────────────────
+        function _buildBarrier(x, z) {
+            const g = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.7 });
+            const wMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.4), mat);
+            base.position.y = 0.3 + 0.11; g.add(base);
+            const top = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.3), mat);
+            top.position.y = 0.3 + 0.33; g.add(top);
+            // White stripes
+            [0.1, -0.15].forEach(sy => {
+                const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.05, 0.42), wMat);
+                stripe.position.set(0, 0.3 + 0.22 + sy, 0); g.add(stripe);
+            });
+            g.position.set(x, 0, z);
+            return g;
+        }
+
+        // ── Stop sign ─────────────────────────────────────────────────────────────
+        function _buildStopSign(x, z) {
+            const g = new THREE.Group();
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.3, 6),
+                new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.7, metalness: 0.3 }));
+            pole.position.y = 0.65; g.add(pole);
+            const sign = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.05),
+                new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.6 }));
+            sign.position.y = 1.38; sign.rotation.y = Math.PI / 8; g.add(sign);
+            const border = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.40, 0.06),
+                new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }));
+            border.position.y = 1.38; border.rotation.y = Math.PI / 8; g.add(border);
+            g.position.set(x, 0, z);
+            return g;
+        }
+
+        // ── Semi-truck mesh ────────────────────────────────────────────────────────
+        function buildTruckMesh(color, direction) {
+            const g = new THREE.Group();
+            const cabMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.5, metalness: 0.25 });
+            const trailerMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.7, metalness: 0.1 });
+            const cab = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.92), cabMat);
+            cab.position.set(direction * 1.9, 0.55, 0); cab.castShadow = true; g.add(cab);
+            // Cab windshield
+            const wind = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.7),
+                new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.2, metalness: 0.5 }));
+            wind.position.set(direction * 2.38, 0.72, 0); g.add(wind);
+            const trailer = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.72, 0.88), trailerMat);
+            trailer.position.set(-direction * 0.65, 0.5, 0); trailer.castShadow = true; g.add(trailer);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
+            [direction * 1.6, direction * 0.7, -direction * 0.3, -direction * 1.4, -direction * 2.0].forEach(wx => {
+                [-0.52, 0.52].forEach(wz => {
+                    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.12, 8), wheelMat);
+                    w.rotation.x = Math.PI / 2; w.position.set(wx, 0.17, wz); g.add(w);
+                });
+            });
+            return g;
+        }
+
         function createSafeLane(lane, adjacentToWater = false) {
             lane.trees = lane.trees || [];
             // Grass tile — varied green shade
@@ -2193,6 +2309,59 @@
                     if (treeGroup.userData.halfW !== undefined) {
                         lane.buildings = lane.buildings || [];
                         lane.buildings.push({ x: treeX, halfW: treeGroup.userData.halfW });
+                    }
+                }
+            }
+
+            // ── Extra hazards on non-water-adjacent lanes ──────────────────────
+            if (adjacentToWater) return;
+
+            const isCity = _isCityTheme();
+
+            // Nature levels: 25% chance of a patrolling fox
+            if (!isCity && _rand() < 0.25) {
+                const ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
+                const animalMesh = _buildFox(ax, lane.z);
+                scene.add(animalMesh);
+                lane.meshes.push(animalMesh);
+                const rangeHalf = 5 + _rand() * 5;
+                const animal = {
+                    x: ax, z: lane.z, laneIndex: lane.index,
+                    direction: _rand() > 0.5 ? 1 : -1,
+                    speed: 2.0 + _rand() * 2.5,
+                    rangeMin: ax - rangeHalf,
+                    rangeMax: ax + rangeHalf,
+                    mesh: animalMesh,
+                    type: 'fox',
+                };
+                lane.animals = lane.animals || [];
+                lane.animals.push(animal);
+                gameState.animals.push(animal);
+            }
+
+            // Nature levels: 28% chance of a fallen tree partially blocking the lane
+            // City levels:   28% chance of a construction barrier cluster
+            if (_rand() < 0.28) {
+                if (!isCity) {
+                    const halfW = 2.0 + _rand() * 2.5;
+                    const cx = (_rand() - 0.5) * (CONFIG.LANE_WIDTH * 0.5);
+                    const ftMesh = _buildFallenTree(cx, lane.z, halfW);
+                    scene.add(ftMesh);
+                    lane.meshes.push(ftMesh);
+                    lane.buildings = lane.buildings || [];
+                    lane.buildings.push({ x: cx, halfW });
+                } else {
+                    // 1-3 construction barriers spread across lane
+                    const count = 1 + Math.floor(_rand() * 3);
+                    for (let b = 0; b < count; b++) {
+                        const bx = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 4);
+                        if (lane.trees.some(tx => Math.abs(tx - bx) < 1.5)) continue;
+                        const bMesh = _buildBarrier(bx, lane.z);
+                        scene.add(bMesh);
+                        lane.meshes.push(bMesh);
+                        lane.buildings = lane.buildings || [];
+                        lane.buildings.push({ x: bx, halfW: 0.55 });
+                        lane.trees.push(bx);
                     }
                 }
             }
@@ -2371,23 +2540,45 @@
                     laneDirection = _rand() > 0.5 ? 1 : -1;
                 }
             }
+            // 20% chance this is a stop-sign lane (city feel) — cars pause periodically
+            const isStopLane = _isCityTheme() && _rand() < 0.20;
+            if (isStopLane) {
+                const signX = (laneDirection > 0 ? -1 : 1) * (CONFIG.LANE_WIDTH / 2 - 1.5);
+                const signMesh = _buildStopSign(signX, lane.z);
+                scene.add(signMesh);
+                lane.meshes.push(signMesh);
+            }
+
+            // 18% chance of a semi-truck lane — replaces normal cars with 1-2 big trucks
+            const isTruckLane = _rand() < 0.18;
+
             for (let i = 0; i < carCount; i++) {
+                const isTruck = isTruckLane && i < 2;
+                const color = carColors[Math.floor(_rand() * carColors.length)];
                 const car = {
                     x: -CONFIG.LANE_WIDTH / 2 + _rand() * CONFIG.LANE_WIDTH,
                     z: lane.z,
                     laneIndex: lane.index,
-                    speed: minSpeed + _rand() * (maxSpeed - minSpeed),
+                    speed: isTruck
+                        ? (minSpeed + _rand() * (maxSpeed - minSpeed)) * 0.55   // trucks are slower
+                        : minSpeed + _rand() * (maxSpeed - minSpeed),
                     direction: laneDirection,
-                    color: carColors[Math.floor(_rand() * carColors.length)],
+                    color,
+                    hitWidth: isTruck ? 4.2 : CONFIG.CAR_WIDTH,
+                    hasStopSign: isStopLane && i === 0,   // one car per stop lane pauses
                 };
 
-                const carGroup = buildCarMesh(car.color, car.direction);
+                const carGroup = isTruck
+                    ? buildTruckMesh(color, laneDirection)
+                    : buildCarMesh(color, laneDirection);
                 carGroup.position.set(car.x, 0, car.z);
                 scene.add(carGroup);
 
                 car.mesh = carGroup;
                 lane.cars.push(car);
                 gameState.cars.push(car);
+
+                if (isTruckLane && i === 0) break; // one truck per lane is plenty
             }
             addTunnelEntrances(lane);
         }
@@ -2608,6 +2799,10 @@
                     logGroup.meshes.forEach(m => scene.remove(m));
                     gameState.logs = gameState.logs.filter(l => l !== logGroup);
                 });
+                if (lane.animals) {
+                    lane.animals.forEach(a => scene.remove(a.mesh));
+                    gameState.animals = gameState.animals.filter(a => a.laneIndex !== lane.index);
+                }
             }
         }
 
@@ -2629,6 +2824,10 @@
                     logGroup.meshes.forEach(m => scene.remove(m));
                     gameState.logs = gameState.logs.filter(l => l !== logGroup);
                 });
+                if (lane.animals) {
+                    lane.animals.forEach(a => scene.remove(a.mesh));
+                    gameState.animals = gameState.animals.filter(a => a.laneIndex !== lane.index);
+                }
                 gameState.nextLaneIndex--;
             }
         }
@@ -2797,12 +2996,21 @@
             const playerX = player.position.x;
             const playerZ = player.position.z;
 
-            // Check cars
+            // Check cars (uses per-car hitWidth so trucks have a bigger collision box)
             for (let car of gameState.cars) {
                 const dist = Math.abs(car.x - playerX);
-                if (dist < (CONFIG.CAR_WIDTH + CONFIG.PLAYER_SIZE) / 2 &&
+                if (dist < ((car.hitWidth || CONFIG.CAR_WIDTH) + CONFIG.PLAYER_SIZE) / 2 &&
                     Math.abs(car.z - playerZ) < 0.5) {
                     killPlayer('squish');
+                    return;
+                }
+            }
+
+            // Check patrol animals — fox is friendly if you're playing as a fox
+            for (let animal of gameState.animals) {
+                if (Math.abs(animal.x - playerX) < 0.55 && Math.abs(animal.z - playerZ) < 0.55) {
+                    if (animal.type === 'fox' && selectedSkin === 'fox') continue; // friendly!
+                    killPlayer('animal');
                     return;
                 }
             }
@@ -2967,7 +3175,23 @@
         // ============================================================================
         function updateWorldObjects(deltaTime) {
             // Update cars
+            const now = Date.now();
             for (let car of gameState.cars) {
+                // Stop-sign car: pause periodically
+                if (car.hasStopSign) {
+                    if (!car.nextStopAt) car.nextStopAt = now + 1500 + Math.random() * 2500;
+                    if (car.resumeAt && now < car.resumeAt) {
+                        // Stopped — flash brake lights by keeping mesh stationary
+                        continue;
+                    } else if (car.resumeAt && now >= car.resumeAt) {
+                        car.resumeAt = 0;
+                        car.nextStopAt = now + 2000 + Math.random() * 3000;
+                    } else if (now >= car.nextStopAt) {
+                        car.resumeAt = now + 800 + Math.random() * 1200;
+                        continue;
+                    }
+                }
+
                 car.x += car.direction * car.speed * deltaTime;
                 car.mesh.position.x = car.x;
 
@@ -2977,6 +3201,17 @@
                 } else if (car.x < -CONFIG.LANE_WIDTH / 2 - 5) {
                     car.x = CONFIG.LANE_WIDTH / 2 + 5;
                 }
+            }
+
+            // Update patrol animals
+            for (let animal of gameState.animals) {
+                animal.x += animal.direction * animal.speed * deltaTime;
+                animal.mesh.position.x = animal.x;
+                // Face direction of travel
+                animal.mesh.rotation.y = animal.direction > 0 ? Math.PI : 0;
+                // Bounce at patrol range boundaries
+                if (animal.x >= animal.rangeMax) { animal.x = animal.rangeMax; animal.direction = -1; }
+                if (animal.x <= animal.rangeMin) { animal.x = animal.rangeMin; animal.direction =  1; }
             }
 
             // Update logs
@@ -3554,6 +3789,7 @@
                 gameState.particles.forEach(p => scene.remove(p));
                 gameState.particles = [];
             }
+            gameState.animals = [];
             if (player) player.visible = true;
             camera.fov = 50;
             camera.updateProjectionMatrix();
@@ -3572,9 +3808,10 @@
                 lane.cars.forEach(car => scene.remove(car.mesh));
                 lane.logs.forEach(logGroup => logGroup.meshes.forEach(m => scene.remove(m)));
             });
-            gameState.lanes = [];
-            gameState.cars  = [];
-            gameState.logs  = [];
+            gameState.lanes   = [];
+            gameState.cars    = [];
+            gameState.logs    = [];
+            gameState.animals = [];
 
             document.getElementById('score').textContent = '0';
             document.getElementById('best').textContent = `BEST: ${gameState.bestScore}`;

@@ -3318,8 +3318,12 @@
                 const lane = gameState.lanes.find(l => l.index === c.laneIndex);
                 const trees     = (lane && lane.trees)     || [];
                 const buildings = (lane && lane.buildings) || [];
-                const candidates = [c.xOffset, c.xOffset + 1, c.xOffset - 1,
-                                    c.xOffset + 2, c.xOffset - 2, c.xOffset + 1.5, c.xOffset - 1.5];
+                // Search outward from the intended offset in small steps — wide enough to
+                // clear even the largest building (halfW up to 2), so coins are never blocked
+                const candidates = [c.xOffset];
+                for (let d = 0.5; d <= 13; d += 0.5) {
+                    candidates.push(c.xOffset + d, c.xOffset - d);
+                }
                 let finalX = null;
                 for (const x of candidates) {
                     if (Math.abs(x) > CONFIG.LANE_WIDTH / 2 - 0.8) continue;

@@ -1839,6 +1839,219 @@
         ];
         const _flowerColors = [0xff4466, 0xffcc00, 0xff8822, 0xee44cc, 0x88ddff];
 
+        // ── Theme-specific decoration builders ───────────────────────────────
+        function _buildBuilding(x, z, isNeon) {
+            const group = new THREE.Group();
+            const height = 3.5 + _rand() * 7;
+            const w = 1.8 + _rand() * 2.2;
+            const d = 1.6 + _rand() * 1.8;
+            const bodyColor = isNeon
+                ? [0x0a0818, 0x08101a, 0x100818][Math.floor(_rand()*3)]
+                : [0x5a5a6a, 0x6a7080, 0x505060][Math.floor(_rand()*3)];
+            const mat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.85 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(w, height, d), mat);
+            body.position.y = height / 2;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+            // Windows
+            const rows = Math.max(2, Math.floor(height / 1.4));
+            const cols = Math.max(1, Math.floor(w / 1.1));
+            const neonPalette = [0xff00ff, 0x00ffff, 0xff8800, 0x8800ff];
+            const cityPalette = [0xffffcc, 0xffffa0, 0xaaddff];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (_rand() < 0.65) {
+                        const wc = isNeon
+                            ? neonPalette[Math.floor(_rand()*neonPalette.length)]
+                            : cityPalette[Math.floor(_rand()*cityPalette.length)];
+                        const wMat = new THREE.MeshStandardMaterial({
+                            color: wc, emissive: new THREE.Color(wc),
+                            emissiveIntensity: isNeon ? 0.9 : 0.25
+                        });
+                        const win = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 0.06), wMat);
+                        win.position.set(
+                            (c - (cols-1)/2) * (w/cols),
+                            1.2 + r * 1.4,
+                            d/2 + 0.02
+                        );
+                        group.add(win);
+                    }
+                }
+            }
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildJunglePalm(x, z) {
+            const group = new THREE.Group();
+            const height = 3.5 + _rand() * 3.0;
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a18, roughness: 0.92 });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.20, height, 8), trunkMat);
+            trunk.position.y = height / 2;
+            trunk.rotation.z = (_rand() - 0.5) * 0.3;
+            trunk.castShadow = true;
+            group.add(trunk);
+            // Palm frond leaves
+            const lMat = new THREE.MeshStandardMaterial({ color: 0x1a6b1a, roughness: 0.75 });
+            const lMat2 = new THREE.MeshStandardMaterial({ color: 0x0d520d, roughness: 0.75 });
+            const fronds = 6 + Math.floor(_rand() * 4);
+            for (let i = 0; i < fronds; i++) {
+                const angle = (i / fronds) * Math.PI * 2;
+                const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 2.2), i%2===0 ? lMat : lMat2);
+                leaf.position.set(Math.cos(angle)*0.5, height + 0.05, Math.sin(angle)*0.5);
+                leaf.rotation.y = angle;
+                leaf.rotation.z = 0.5;
+                group.add(leaf);
+            }
+            const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), lMat);
+            tuft.scale.set(1.6, 0.5, 1.6);
+            tuft.position.y = height - 0.1;
+            group.add(tuft);
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildCactus(x, z) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x3a7a1a, roughness: 0.82 });
+            const h = 1.8 + _rand() * 2.0;
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, h, 8), mat);
+            trunk.position.y = h / 2;
+            group.add(trunk);
+            if (h > 2.2) {
+                [-1, 1].forEach(side => {
+                    const armBase = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.75, 8), mat);
+                    armBase.rotation.z = side * Math.PI / 2;
+                    armBase.position.set(side * 0.5, h * 0.52, 0);
+                    group.add(armBase);
+                    const armUp = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, h * 0.38, 8), mat);
+                    armUp.position.set(side * 0.9, h * 0.52 + h * 0.19, 0);
+                    group.add(armUp);
+                });
+            }
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildAutumnTree(x, z) {
+            const group = new THREE.Group();
+            const h = 1.2 + _rand() * 1.2;
+            const rT = 0.12 + _rand() * 0.08;
+            const tMat = new THREE.MeshStandardMaterial({ color: 0x3d2010, roughness: 0.98 });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(rT*0.65, rT, h, 8), tMat);
+            trunk.position.y = h / 2; trunk.castShadow = true; group.add(trunk);
+            const palette = [0xcc5500, 0xdd7700, 0xcc3300, 0xffaa00, 0xee4400, 0xbb2200];
+            const c1 = palette[Math.floor(_rand()*palette.length)];
+            const c2 = palette[Math.floor(_rand()*palette.length)];
+            const fMat  = new THREE.MeshStandardMaterial({ color: c1, roughness: 0.8 });
+            const fMat2 = new THREE.MeshStandardMaterial({ color: c2, roughness: 0.8 });
+            const mR = 0.58 + _rand() * 0.28;
+            const main = new THREE.Mesh(new THREE.SphereGeometry(mR, 10, 8), fMat);
+            main.position.y = h + mR * 0.9; main.castShadow = true; group.add(main);
+            for (let i = 0; i < 4 + Math.floor(_rand()*3); i++) {
+                const ang = (i / 5) * Math.PI * 2;
+                const br = mR * (0.45 + _rand() * 0.3);
+                const bump = new THREE.Mesh(new THREE.SphereGeometry(br, 8, 7), i%2===0 ? fMat : fMat2);
+                bump.position.set(Math.cos(ang)*mR*0.72, h + mR*0.5 + (_rand()-0.5)*mR*0.5, Math.sin(ang)*mR*0.72);
+                bump.castShadow = true; group.add(bump);
+            }
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildIcePine(x, z) {
+            const group = new THREE.Group();
+            const snowMat = new THREE.MeshStandardMaterial({ color: 0xd0e8f0, roughness: 0.4, metalness: 0.05 });
+            const iceMat  = new THREE.MeshStandardMaterial({ color: 0x88bbdd, roughness: 0.1, metalness: 0.25, transparent: true, opacity: 0.88 });
+            const tMat    = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.95 });
+            if (_rand() > 0.35) {
+                const h = 1.2 + _rand() * 1.0;
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.15, h, 8), tMat);
+                trunk.position.y = h/2; group.add(trunk);
+                for (let i = 0; i < 3; i++) {
+                    const cR = (0.65 - i*0.17) * (0.9 + _rand()*0.25);
+                    const cone = new THREE.Mesh(new THREE.ConeGeometry(cR, 0.75, 9), snowMat);
+                    cone.position.y = h + 0.1 + i * 0.52; cone.castShadow = true; group.add(cone);
+                }
+            } else {
+                const colH = 1.8 + _rand() * 2.2;
+                const col = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.26, colH, 6), iceMat);
+                col.position.y = colH / 2; group.add(col);
+            }
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildLavaRock(x, z) {
+            const group = new THREE.Group();
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x1a0800, roughness: 0.97 });
+            const glowMat = new THREE.MeshStandardMaterial({
+                color: 0xff3300, emissive: new THREE.Color(0xff2200), emissiveIntensity: 0.7, roughness: 0.5
+            });
+            const h = 0.9 + _rand() * 1.8;
+            const w = 0.9 + _rand() * 1.2;
+            const rock = new THREE.Mesh(new THREE.BoxGeometry(w, h, w*0.85), rockMat);
+            rock.position.y = h/2; rock.rotation.y = _rand()*Math.PI; rock.castShadow = true; group.add(rock);
+            const crack = new THREE.Mesh(new THREE.BoxGeometry(w*0.5, 0.18, 0.1), glowMat);
+            crack.position.y = 0.09; group.add(crack);
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildIndustrialObj(x, z) {
+            const group = new THREE.Group();
+            const mat  = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.92 });
+            const rMat = new THREE.MeshStandardMaterial({ color: 0x441111, roughness: 0.85 });
+            if (_rand() > 0.45) {
+                const h = 3.0 + _rand() * 3.5;
+                const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.28, h, 10), mat);
+                stack.position.y = h/2; stack.castShadow = true; group.add(stack);
+                const band = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.32, 10), rMat);
+                band.position.y = h - 0.16; group.add(band);
+            } else {
+                const w = 1.2 + _rand()*1.0, h = 0.9 + _rand()*1.2;
+                const tank = new THREE.Mesh(new THREE.CylinderGeometry(w*0.42, w*0.42, h, 12), mat);
+                tank.rotation.z = Math.PI/2; tank.position.y = w*0.42; group.add(tank);
+            }
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildDeadTree(x, z) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.96 });
+            const h = 2.2 + _rand() * 2.2;
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, h, 6), mat);
+            trunk.position.y = h/2; trunk.castShadow = true; group.add(trunk);
+            const bCount = 3 + Math.floor(_rand()*4);
+            for (let i = 0; i < bCount; i++) {
+                const bL = 0.6 + _rand()*1.0;
+                const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.07, bL, 5), mat);
+                const ang = (i/bCount)*Math.PI*2 + _rand()*0.6;
+                branch.position.set(Math.cos(ang)*bL*0.38, h*(0.45+_rand()*0.45), Math.sin(ang)*bL*0.38);
+                branch.rotation.z = Math.cos(ang)*0.75; branch.rotation.x = Math.sin(ang)*0.75;
+                group.add(branch);
+            }
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function _buildThemeDecoration(x, z) {
+            if (!_currentTheme) return _buildTree(x, z, z);
+            const fog = _currentTheme.fog;
+            if (fog === 0x8899aa) return _buildBuilding(x, z, false);
+            if (fog === 0x0a0a2a) return _buildBuilding(x, z, true);
+            if (fog === 0x1a3a1a) return _buildJunglePalm(x, z);
+            if (fog === 0xe8a850) return _buildCactus(x, z);
+            if (fog === 0xd4844a) return _buildAutumnTree(x, z);
+            if (fog === 0x9bb8d4) return _buildIcePine(x, z);
+            if (fog === 0x3a1a00) return _buildLavaRock(x, z);
+            if (fog === 0x221122) return _buildIndustrialObj(x, z);
+            if (fog === 0x050505) return _buildDeadTree(x, z);
+            return _buildTree(x, z, z);
+        }
+
         function _buildTree(x, z, laneZ) {
             const group = new THREE.Group();
             const isPine = Math.random() > 0.45;
@@ -1972,7 +2185,7 @@
                 // Only place if we found a valid gap
                 if (!lane.trees.some(tx => Math.abs(treeX - tx) < 2.0)) {
                     lane.trees.push(treeX);
-                    const treeGroup = _buildTree(treeX, lane.z, lane.z);
+                    const treeGroup = _buildThemeDecoration(treeX, lane.z);
                     scene.add(treeGroup);
                     lane.meshes.push(treeGroup);
                 }

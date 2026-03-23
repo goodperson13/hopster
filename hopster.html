@@ -1844,7 +1844,7 @@
             const group = new THREE.Group();
             const height = 3.5 + _rand() * 7;
             const w = 1.8 + _rand() * 2.2;
-            const d = 1.6 + _rand() * 1.8;
+            const d = 0.5 + _rand() * 0.35; // capped to fit within LANE_DEPTH=1 so buildings don't bleed into roads
             const bodyColor = isNeon
                 ? [0x0a0818, 0x08101a, 0x100818][Math.floor(_rand()*3)]
                 : [0x5a5a6a, 0x6a7080, 0x505060][Math.floor(_rand()*3)];
@@ -1880,6 +1880,7 @@
                 }
             }
             group.position.set(x, 0, z);
+            group.userData.halfW = w / 2; // used for player + coin collision
             return group;
         }
 
@@ -2188,6 +2189,11 @@
                     const treeGroup = _buildThemeDecoration(treeX, lane.z);
                     scene.add(treeGroup);
                     lane.meshes.push(treeGroup);
+                    // Track buildings separately for halfW-based collision
+                    if (treeGroup.userData.halfW !== undefined) {
+                        lane.buildings = lane.buildings || [];
+                        lane.buildings.push({ x: treeX, halfW: treeGroup.userData.halfW });
+                    }
                 }
             }
         }
@@ -2658,6 +2664,8 @@
             // Tree collision — trees are solid, block movement into their cell
             const treeLane = gameState.lanes.find(l => Math.abs(l.z - newZ) < 0.5);
             if (treeLane && treeLane.trees && treeLane.trees.some(tx => Math.abs(tx - newX) < 0.45)) return;
+            // Building collision — uses actual half-width so player can't walk through any part of a building
+            if (treeLane && treeLane.buildings && treeLane.buildings.some(b => Math.abs(b.x - newX) < b.halfW + 0.4)) return;
 
             // Duck/frog glide when swimming freely in water, but hop normally when on a log
             const movingLane = gameState.lanes.find(l => Math.abs(l.z - gameState.playerPos.z) < 0.5);
@@ -3301,15 +3309,18 @@
                 // Skip coins permanently collected in a previous run
                 if (permanent.has(coinIndex)) return;
 
-                // Check the lane for trees and nudge coin clear of any overlap
+                // Check the lane for trees/buildings and nudge coin clear of any overlap
                 const lane = gameState.lanes.find(l => l.index === c.laneIndex);
-                const trees = (lane && lane.trees) || [];
+                const trees     = (lane && lane.trees)     || [];
+                const buildings = (lane && lane.buildings) || [];
                 const candidates = [c.xOffset, c.xOffset + 1, c.xOffset - 1,
                                     c.xOffset + 2, c.xOffset - 2, c.xOffset + 1.5, c.xOffset - 1.5];
                 let finalX = null;
                 for (const x of candidates) {
                     if (Math.abs(x) > CONFIG.LANE_WIDTH / 2 - 0.8) continue;
-                    if (!trees.some(tx => Math.abs(tx - x) < 0.6)) { finalX = x; break; }
+                    if (trees.some(tx => Math.abs(tx - x) < 0.6)) continue;
+                    if (buildings.some(b => Math.abs(b.x - x) < b.halfW + 0.5)) continue;
+                    finalX = x; break;
                 }
                 if (finalX === null) return; // no clear spot, skip
 

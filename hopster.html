@@ -3308,6 +3308,7 @@
         function createLevelCoins(levelData) {
             let placed = 0;
             const permanent = _getCollectedCoins(gameState.currentLevel);
+            let permanentDirty = false;
 
             levelData.coins.forEach((c, coinIndex) => {
                 // Skip coins permanently collected in a previous run
@@ -3326,7 +3327,13 @@
                     if (buildings.some(b => Math.abs(b.x - x) < b.halfW + 0.5)) continue;
                     finalX = x; break;
                 }
-                if (finalX === null) return; // no clear spot, skip
+                if (finalX === null) {
+                    // Coin is permanently blocked by scenery — silently mark as collected
+                    // so it never counts against the player's star rating
+                    permanent.add(coinIndex);
+                    permanentDirty = true;
+                    return;
+                }
 
                 const coinGeom = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 16);
                 const coinMat  = new THREE.MeshStandardMaterial({
@@ -3349,6 +3356,8 @@
                 gameState.levelCoins.push(coin);
                 placed++;
             });
+            // Save any auto-marked blocked coins so they don't reappear or skew the count
+            if (permanentDirty) _saveCollectedCoins(gameState.currentLevel, permanent);
             document.getElementById('lcHudTotal').textContent = placed;
             document.getElementById('lcHudCount').textContent = 0;
             document.getElementById('levelCoinHud').style.display = 'inline-block';

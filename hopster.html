@@ -3211,7 +3211,10 @@
             gameState.levelTimerRunning = false;
             const lvl = LEVELS[levelIndex];
             const total = lvl.coins.length;
-            const earned = _calcStars(coinsCollected, levelIndex);
+            // Count coins from ALL runs (previous + this run) so retrying for missed coins gives correct stars
+            const previouslySaved = _getCollectedCoins(levelIndex);
+            const totalCollectedAllRuns = previouslySaved.size + coinsCollected;
+            const earned = _calcStars(totalCollectedAllRuns, levelIndex);
 
             // Save best stars
             const stars = _getLevelStars();
@@ -3248,7 +3251,7 @@
                 setTimeout(() => playStarSound(si), 350 + si * 350);
             }
 
-            document.getElementById('lcCoins').textContent = `🪙 ${coinsCollected} / ${total} coins collected`;
+            document.getElementById('lcCoins').textContent = `🪙 ${totalCollectedAllRuns} / ${total} coins collected`;
             document.getElementById('lcCoinsAdded').textContent = coinsCollected > 0 ? `+${coinsCollected} added to your wallet!` : '';
 
             // Best time tracking

@@ -383,6 +383,11 @@
                 ⚙️ SETTINGS
             </button>
         </div>
+        <button id="resetBtn" style="margin-top:10px;padding:8px 22px;font-size:14px;
+            background:rgba(200,50,50,0.25);color:#ff9999;border:1.5px solid rgba(200,50,50,0.5);
+            border-radius:8px;cursor:pointer;font-weight:bold;opacity:0.75;">
+            🗑️ RESET ALL PROGRESS
+        </button>
     </div>
 
     <!-- SETTINGS PANEL -->
@@ -4282,6 +4287,17 @@
         });
         document.getElementById('shopBtn').addEventListener('click', openShop);
 
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            if (!confirm('Reset ALL progress? This will clear your coins, levels, stars, and animals. This cannot be undone.')) return;
+            const keys = [
+                'hopsterTotalCoins', 'hopsterBestScore', 'hopsterLevelStars',
+                'hopsterUnlockedLevels', 'hopsterCollectedCoins', 'hopsterBestTimes',
+                'hopsterOwnedSkins', 'hopsterSelectedSkin',
+            ];
+            keys.forEach(k => localStorage.removeItem(k));
+            location.reload();
+        });
+
         // Render distance slider
         const RENDER_PRESETS = {
             1: { gen: 12, remove: 6,  label: 'Low'  },  // 12 lanes ahead
@@ -4538,9 +4554,10 @@
         ];
 
         // Load persisted skin state
-        let ownedSkins = JSON.parse(localStorage.getItem('hopsterOwnedSkins') || '["duck"]');
+        let ownedSkins = JSON.parse(localStorage.getItem('hopsterOwnedSkins') || '["chicken"]');
         let selectedSkin = localStorage.getItem('hopsterSelectedSkin') || 'chicken';
-        if (!ownedSkins.includes('duck')) ownedSkins.push('duck');
+        // Ensure chicken is always owned (it's free)
+        if (!ownedSkins.includes('chicken')) ownedSkins.push('chicken');
 
         function saveSkinState() {
             localStorage.setItem('hopsterOwnedSkins', JSON.stringify(ownedSkins));

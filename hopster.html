@@ -2325,21 +2325,37 @@
 
             const isCity = _isCityTheme();
 
-            // Nature levels: 25% chance of a patrolling fox
+            // Nature levels: 25% chance of a patrolling animal
             if (!isCity && _rand() < 0.25) {
                 const ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
-                const animalMesh = _buildFox(ax, lane.z);
+                // Pick a random animal type using the seeded RNG
+                const animalTypes = ['duck','frog','bunny','chicken','fox','bear'];
+                const animalCreators = {
+                    duck:    createDuckPlayer,
+                    frog:    createFrogPlayer,
+                    bunny:   createBunnyPlayer,
+                    chicken: createChickenPlayer,
+                    fox:     createFoxPlayer,
+                    bear:    createBearPlayer,
+                };
+                const animalLandY = { duck:0.33, frog:0.20, bunny:0.30, chicken:0.33, fox:0.40, bear:0.72 };
+                const chosenType = animalTypes[Math.floor(_rand() * animalTypes.length)];
+                const animalMesh = animalCreators[chosenType]();
+                animalMesh.position.set(ax, animalLandY[chosenType], lane.z);
                 scene.add(animalMesh);
                 lane.meshes.push(animalMesh);
                 const rangeHalf = 5 + _rand() * 5;
+                const initDir = _rand() > 0.5 ? 1 : -1;
+                // Player models face -Z at rotation.y=0; rotate ±90° to face along X axis
+                animalMesh.rotation.y = initDir > 0 ? -Math.PI / 2 : Math.PI / 2;
                 const animal = {
                     x: ax, z: lane.z, laneIndex: lane.index,
-                    direction: _rand() > 0.5 ? 1 : -1,
+                    direction: initDir,
                     speed: 2.0 + _rand() * 2.5,
                     rangeMin: ax - rangeHalf,
                     rangeMax: ax + rangeHalf,
                     mesh: animalMesh,
-                    type: 'fox',
+                    type: chosenType,
                 };
                 lane.animals = lane.animals || [];
                 lane.animals.push(animal);
@@ -3013,10 +3029,10 @@
                 }
             }
 
-            // Check patrol animals — fox is friendly if you're playing as a fox
+            // Check patrol animals — same species as player is friendly
             for (let animal of gameState.animals) {
                 if (Math.abs(animal.x - playerX) < 0.55 && Math.abs(animal.z - playerZ) < 0.55) {
-                    if (animal.type === 'fox' && selectedSkin === 'fox') continue; // friendly!
+                    if (animal.type === selectedSkin) continue; // friendly — same species!
                     killPlayer('animal');
                     return;
                 }
@@ -3214,8 +3230,8 @@
             for (let animal of gameState.animals) {
                 animal.x += animal.direction * animal.speed * deltaTime;
                 animal.mesh.position.x = animal.x;
-                // Face direction of travel
-                animal.mesh.rotation.y = animal.direction > 0 ? Math.PI : 0;
+                // Player models face -Z at rotation.y=0; rotate ±90° to face along X axis
+                animal.mesh.rotation.y = animal.direction > 0 ? -Math.PI / 2 : Math.PI / 2;
                 // Bounce at patrol range boundaries
                 if (animal.x >= animal.rangeMax) { animal.x = animal.rangeMax; animal.direction = -1; }
                 if (animal.x <= animal.rangeMin) { animal.x = animal.rangeMin; animal.direction =  1; }

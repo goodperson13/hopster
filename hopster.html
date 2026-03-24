@@ -2325,23 +2325,11 @@
 
             const isCity = _isCityTheme();
 
-            // Nature levels: 25% chance of a patrolling animal
+            // Nature levels: 25% chance of a patrolling fox
             if (!isCity && _rand() < 0.25) {
                 const ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
-                // Pick a random animal type using the seeded RNG
-                const animalTypes = ['duck','frog','bunny','chicken','fox','bear'];
-                const animalCreators = {
-                    duck:    createDuckPlayer,
-                    frog:    createFrogPlayer,
-                    bunny:   createBunnyPlayer,
-                    chicken: createChickenPlayer,
-                    fox:     createFoxPlayer,
-                    bear:    createBearPlayer,
-                };
-                const animalLandY = { duck:0.33, frog:0.20, bunny:0.30, chicken:0.33, fox:0.40, bear:0.72 };
-                const chosenType = animalTypes[Math.floor(_rand() * animalTypes.length)];
-                const animalMesh = animalCreators[chosenType]();
-                animalMesh.position.set(ax, animalLandY[chosenType], lane.z);
+                const animalMesh = createFoxPlayer();
+                animalMesh.position.set(ax, 0.40, lane.z);
                 scene.add(animalMesh);
                 lane.meshes.push(animalMesh);
                 const rangeHalf = 5 + _rand() * 5;
@@ -2355,7 +2343,7 @@
                     rangeMin: ax - rangeHalf,
                     rangeMax: ax + rangeHalf,
                     mesh: animalMesh,
-                    type: chosenType,
+                    type: 'fox',
                 };
                 lane.animals = lane.animals || [];
                 lane.animals.push(animal);
@@ -3029,10 +3017,10 @@
                 }
             }
 
-            // Check patrol animals — same species as player is friendly
+            // Check patrol animals — fox ability: fox skin passes through fox patrols
             for (let animal of gameState.animals) {
                 if (Math.abs(animal.x - playerX) < 0.55 && Math.abs(animal.z - playerZ) < 0.55) {
-                    if (animal.type === selectedSkin) continue; // friendly — same species!
+                    if (animal.type === 'fox' && selectedSkin === 'fox') continue; // fox ability!
                     killPlayer('animal');
                     return;
                 }

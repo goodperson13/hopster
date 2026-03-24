@@ -256,9 +256,8 @@
 
         #dpad {
             position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
+            bottom: 110px;
+            right: 110px;
             display: none;
             z-index: 20;
         }
@@ -269,16 +268,16 @@
 
         .dpad-btn {
             position: absolute;
-            width: 55px;
-            height: 55px;
+            width: 64px;
+            height: 64px;
             background: rgba(255, 255, 255, 0.3);
             border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
+            font-size: 26px;
             color: white;
             font-weight: bold;
             transition: all 0.1s;
@@ -290,10 +289,10 @@
             transform: scale(0.95);
         }
 
-        #dpadUp { top: -70px; left: 50%; transform: translateX(-50%); }
-        #dpadDown { bottom: -70px; left: 50%; transform: translateX(-50%); }
-        #dpadLeft { left: -70px; top: 50%; transform: translateY(-50%); }
-        #dpadRight { right: -70px; top: 50%; transform: translateY(-50%); }
+        #dpadUp    { top: -90px;    left: 50%; transform: translateX(-50%); }
+        #dpadDown  { bottom: -90px; left: 50%; transform: translateX(-50%); }
+        #dpadLeft  { left: -90px;   top: 50%;  transform: translateY(-50%); }
+        #dpadRight { right: -90px;  top: 50%;  transform: translateY(-50%); }
 
         /* ── SHOP ── */
         #shop {

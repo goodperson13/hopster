@@ -1650,66 +1650,62 @@
             group.position.set(0, 0.33, 0); scene.add(group); return group;
         }
 
-        function createFoxPlayer() {
+        function createWolfPlayer() {
             const group = new THREE.Group();
-            const orangeMat = new THREE.MeshStandardMaterial({ color: 0xC24A00, roughness: 0.78, metalness: 0.0 });
-            const lightOrange = new THREE.MeshStandardMaterial({ color: 0xE06820, roughness: 0.80 });
-            const whiteMat  = new THREE.MeshStandardMaterial({ color: 0xEFEADC, roughness: 0.88 });
-            const blackMat  = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.82 });
-            const eyeMat    = new THREE.MeshStandardMaterial({ color: 0xdd8800, roughness: 0.15, metalness: 0.2 });
-            const pupilMat  = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.1, metalness: 0.3 });
+            // Wolf palette: blue-gray body, cream belly, dark gray accents, amber eyes
+            const grayMat  = new THREE.MeshStandardMaterial({ color: 0x6E7A7E, roughness: 0.82, metalness: 0.0 });
+            const darkGray = new THREE.MeshStandardMaterial({ color: 0x3A4044, roughness: 0.85, metalness: 0.0 });
+            const creamMat = new THREE.MeshStandardMaterial({ color: 0xC8C4B0, roughness: 0.88 });
+            const blackMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.82 });
+            const eyeMat   = new THREE.MeshStandardMaterial({ color: 0xD4A000, roughness: 0.15, metalness: 0.2 });
+            const pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.1,  metalness: 0.3 });
 
-            // Body
-            const body = new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 12), orangeMat);
-            body.scale.set(0.96, 0.84, 1.08); body.position.set(0, 0.0, 0); body.castShadow = true; group.add(body);
-            // White chest / belly
-            const belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 10), whiteMat);
-            belly.scale.set(0.68, 0.58, 0.36); belly.position.set(0, -0.02, -0.23); group.add(belly);
-            // Head — wedge-shaped
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), orangeMat);
-            head.scale.set(1.0, 0.91, 1.12); head.position.set(0, 0.52, -0.11); head.castShadow = true; group.add(head);
-            // Muzzle — elongated
-            const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.148, 12, 10), whiteMat);
-            muzzle.scale.set(0.62, 0.52, 1.22); muzzle.position.set(0, 0.43, -0.32); group.add(muzzle);
-            // Black nose
-            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.048, 8, 7), blackMat);
-            nose.position.set(0, 0.452, -0.42); group.add(nose);
-            // Black cheek stripe marks
+            // Body — broader and more muscular than fox
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.38, 16, 12), grayMat);
+            body.scale.set(1.02, 0.86, 1.10); body.position.set(0, 0.0, 0); body.castShadow = true; group.add(body);
+            // Light cream chest / belly
+            const belly = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 10), creamMat);
+            belly.scale.set(0.72, 0.60, 0.38); belly.position.set(0, -0.02, -0.24); group.add(belly);
+            // Head — broad, blocky wolf head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 12), grayMat);
+            head.scale.set(1.06, 0.94, 1.14); head.position.set(0, 0.54, -0.10); head.castShadow = true; group.add(head);
+            // Long narrow muzzle — cream / lighter gray
+            const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.155, 12, 10), creamMat);
+            muzzle.scale.set(0.60, 0.50, 1.40); muzzle.position.set(0, 0.44, -0.33); group.add(muzzle);
+            // Black nose — large
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 7), blackMat);
+            nose.position.set(0, 0.455, -0.46); group.add(nose);
+            // Large pointed ears with lighter inner fur
             [-1, 1].forEach(s => {
-                const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.05), blackMat);
-                stripe.position.set(s * 0.14, 0.46, -0.32); stripe.rotation.z = s * 0.3; group.add(stripe);
-            });
-            // Pointed upright ears
-            [-1, 1].forEach(s => {
-                const earOuter = new THREE.Mesh(new THREE.ConeGeometry(0.105, 0.28, 8), orangeMat);
-                earOuter.position.set(s * 0.155, 0.79, -0.09); earOuter.rotation.z = s * 0.08; earOuter.castShadow = true; group.add(earOuter);
-                const earInner = new THREE.Mesh(new THREE.ConeGeometry(0.058, 0.20, 8), blackMat);
-                earInner.position.set(s * 0.155, 0.79, -0.10); earInner.rotation.z = s * 0.08; group.add(earInner);
+                const earOuter = new THREE.Mesh(new THREE.ConeGeometry(0.110, 0.31, 8), darkGray);
+                earOuter.position.set(s * 0.162, 0.83, -0.07); earOuter.rotation.z = s * 0.10; earOuter.castShadow = true; group.add(earOuter);
+                const earInner = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.22, 8), creamMat);
+                earInner.position.set(s * 0.162, 0.83, -0.08); earInner.rotation.z = s * 0.10; group.add(earInner);
             });
             // Amber eyes with pupils
             [-1, 1].forEach(s => {
-                const iris = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), eyeMat);
-                iris.position.set(s * 0.118, 0.558, -0.310); group.add(iris);
-                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.038, 10, 8), pupilMat);
-                pupil.position.set(s * 0.118, 0.558, -0.340); group.add(pupil);
+                const iris = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 8), eyeMat);
+                iris.position.set(s * 0.122, 0.565, -0.320); group.add(iris);
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.040, 10, 8), pupilMat);
+                pupil.position.set(s * 0.122, 0.565, -0.352); group.add(pupil);
                 const spark = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), _eyeSparkMat);
-                spark.position.set(s * 0.126, 0.567, -0.346); group.add(spark);
+                spark.position.set(s * 0.130, 0.574, -0.358); group.add(spark);
             });
-            // Bushy fluffy tail
-            const tailCore = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 10), orangeMat);
-            tailCore.scale.set(0.72, 0.62, 1.15); tailCore.position.set(0, 0.16, 0.46); tailCore.castShadow = true; group.add(tailCore);
-            const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), whiteMat);
-            tailTip.position.set(0, 0.14, 0.61); group.add(tailTip);
-            const tailMid = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), lightOrange);
-            tailMid.position.set(0, 0.20, 0.52); group.add(tailMid);
-            // Black leg stockings + paws
+            // Bushy tail — dark tip (wolves have dark tail tips, unlike fox's white)
+            const tailCore = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), grayMat);
+            tailCore.scale.set(0.68, 0.60, 1.18); tailCore.position.set(0, 0.17, 0.48); tailCore.castShadow = true; group.add(tailCore);
+            const tailMid = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), darkGray);
+            tailMid.position.set(0, 0.15, 0.60); group.add(tailMid);
+            const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), blackMat);
+            tailTip.position.set(0, 0.13, 0.68); group.add(tailTip);
+            // Dark gray legs + black paws
             [-1, 1].forEach(s => {
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.20, 8), blackMat);
-                leg.position.set(s * 0.13, -0.22, 0.07); leg.castShadow = true; group.add(leg);
-                const paw = new THREE.Mesh(new THREE.SphereGeometry(0.072, 8, 6), blackMat);
-                paw.scale.set(1.0, 0.5, 1.4); paw.position.set(s * 0.13, -0.32, 0.14); group.add(paw);
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.22, 8), darkGray);
+                leg.position.set(s * 0.14, -0.22, 0.07); leg.castShadow = true; group.add(leg);
+                const paw = new THREE.Mesh(new THREE.SphereGeometry(0.076, 8, 6), blackMat);
+                paw.scale.set(1.0, 0.5, 1.4); paw.position.set(s * 0.14, -0.33, 0.14); group.add(paw);
             });
-            group.scale.set(0.75, 0.75, 0.75);
+            group.scale.set(0.78, 0.78, 0.78);
             group.position.set(0, 0.40, 0); scene.add(group); return group;
 
         }
@@ -1781,7 +1777,7 @@
                 case 'frog':    return createFrogPlayer();
                 case 'bunny':   return createBunnyPlayer();
                 case 'chicken': return createChickenPlayer();
-                case 'fox':     return createFoxPlayer();
+                case 'wolf':    return createWolfPlayer();
                 case 'bear':    return createBearPlayer();
                 default:        return createDuckPlayer();
             }
@@ -2325,10 +2321,10 @@
 
             const isCity = _isCityTheme();
 
-            // Nature levels: 25% chance of a patrolling fox
+            // Nature levels: 25% chance of a patrolling wolf
             if (!isCity && _rand() < 0.25) {
                 const ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
-                const animalMesh = createFoxPlayer();
+                const animalMesh = createWolfPlayer();
                 animalMesh.position.set(ax, 0.40, lane.z);
                 scene.add(animalMesh);
                 lane.meshes.push(animalMesh);
@@ -2343,7 +2339,7 @@
                     rangeMin: ax - rangeHalf,
                     rangeMax: ax + rangeHalf,
                     mesh: animalMesh,
-                    type: 'fox',
+                    type: 'wolf',
                 };
                 lane.animals = lane.animals || [];
                 lane.animals.push(animal);
@@ -2964,7 +2960,7 @@
                     }
                 } else {
                     // Per-skin land height — smaller/larger animals sit at different heights
-                    const _landY = { duck:0.33, frog:0.20, bunny:0.30, chicken:0.33, fox:0.40, bear:0.72 };
+                    const _landY = { duck:0.33, frog:0.20, bunny:0.30, chicken:0.33, wolf:0.40, bear:0.72 };
                     player.position.y = _landY[selectedSkin] ?? 0.33;
                 }
                 player.position.z = gameState.playerPos.z;
@@ -3017,10 +3013,10 @@
                 }
             }
 
-            // Check patrol animals — fox ability: fox skin passes through fox patrols
+            // Check patrol animals — wolf ability: wolf skin passes through wolf patrols
             for (let animal of gameState.animals) {
                 if (Math.abs(animal.x - playerX) < 0.55 && Math.abs(animal.z - playerZ) < 0.55) {
-                    if (animal.type === 'fox' && selectedSkin === 'fox') continue; // fox ability!
+                    if (animal.type === 'wolf' && selectedSkin === 'wolf') continue; // wolf ability!
                     killPlayer('animal');
                     return;
                 }
@@ -4553,7 +4549,7 @@
         const SKINS = [
             { id: 'chicken', name: 'Chicken', emoji: '🐔', price: 0,   desc: 'Default' },
             { id: 'bunny',   name: 'Bunny',   emoji: '🐰', price: 25,  desc: '25 🪙' },
-            { id: 'fox',     name: 'Fox',     emoji: '🦊', price: 50,  desc: '50 🪙' },
+            { id: 'wolf',    name: 'Wolf',    emoji: '🐺', price: 50,  desc: '50 🪙' },
             { id: 'duck',    name: 'Duck',    emoji: '🦆', price: 75,  desc: '75 🪙' },
             { id: 'frog',    name: 'Frog',    emoji: '🐸', price: 100, desc: '100 🪙' },
             { id: 'bear',    name: 'Bear',    emoji: '🐻', price: 125, desc: '125 🪙' },

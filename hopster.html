@@ -1774,12 +1774,13 @@
 
         function createPlayer() {
             switch (selectedSkin) {
+                case 'duck':    return createDuckPlayer();
                 case 'frog':    return createFrogPlayer();
                 case 'bunny':   return createBunnyPlayer();
                 case 'chicken': return createChickenPlayer();
                 case 'wolf':    return createWolfPlayer();
                 case 'bear':    return createBearPlayer();
-                default:        return createDuckPlayer();
+                default:        return createChickenPlayer();
             }
         }
 
@@ -4558,6 +4559,9 @@
         // Load persisted skin state
         let ownedSkins = JSON.parse(localStorage.getItem('hopsterOwnedSkins') || '["chicken"]');
         let selectedSkin = localStorage.getItem('hopsterSelectedSkin') || 'chicken';
+        // Migrate: fox was renamed to wolf
+        ownedSkins = ownedSkins.map(s => s === 'fox' ? 'wolf' : s);
+        if (selectedSkin === 'fox') selectedSkin = 'wolf';
         // Ensure chicken is always owned (it's free)
         if (!ownedSkins.includes('chicken')) ownedSkins.push('chicken');
 

@@ -2318,12 +2318,22 @@
 
             // ── Extra hazards on non-water-adjacent lanes ──────────────────────
             if (adjacentToWater) return;
+            // Don't spawn hazards on the starting lanes — player would die immediately
+            if (lane.index < 3) return;
 
             const isCity = _isCityTheme();
 
             // Nature levels: 25% chance of a patrolling wolf
             if (!isCity && _rand() < 0.25) {
-                const ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
+                // Pick a spawn X that doesn't overlap any upright tree or building
+                const lTrees = lane.trees || [];
+                const lBuildings = lane.buildings || [];
+                let ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
+                let axAttempts = 0;
+                while (axAttempts < 20 && (
+                    lTrees.some(tx => Math.abs(tx - ax) < 1.2) ||
+                    lBuildings.some(b => Math.abs(b.x - ax) < b.halfW + 0.6)
+                )) { ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6); axAttempts++; }
                 const animalMesh = createWolfPlayer();
                 animalMesh.position.set(ax, 0.40, lane.z);
                 scene.add(animalMesh);
@@ -2351,12 +2361,20 @@
             if (_rand() < 0.28) {
                 if (!isCity) {
                     const halfW = 2.0 + _rand() * 2.5;
-                    const cx = (_rand() - 0.5) * (CONFIG.LANE_WIDTH * 0.5);
+                    // Find a spot that doesn't overlap any upright tree
+                    let cx = (_rand() - 0.5) * (CONFIG.LANE_WIDTH * 0.5);
+                    let ftAttempts = 0;
+                    while (ftAttempts < 15 &&
+                        (lane.trees || []).some(tx => Math.abs(tx - cx) < halfW + 0.8)
+                    ) { cx = (_rand() - 0.5) * (CONFIG.LANE_WIDTH * 0.5); ftAttempts++; }
+                    // Only place if we found a clear spot
+                    if (!(lane.trees || []).some(tx => Math.abs(tx - cx) < halfW + 0.8)) {
                     const ftMesh = _buildFallenTree(cx, lane.z, halfW);
                     scene.add(ftMesh);
                     lane.meshes.push(ftMesh);
                     lane.buildings = lane.buildings || [];
                     lane.buildings.push({ x: cx, halfW });
+                    }
                 } else {
                     // 1-3 construction barriers spread across lane
                     const count = 1 + Math.floor(_rand() * 3);
@@ -3212,8 +3230,20 @@
 
             // Update patrol animals
             for (let animal of gameState.animals) {
-                animal.x += animal.direction * animal.speed * deltaTime;
-                animal.mesh.position.x = animal.x;
+                const newX = animal.x + animal.direction * animal.speed * deltaTime;
+                // Find this animal's lane for obstacle checks
+                const animalLane = gameState.lanes.find(l => Math.abs(l.z - animal.z) < 0.5);
+                const laneTrees    = (animalLane && animalLane.trees)    || [];
+                const laneBuildings = (animalLane && animalLane.buildings) || [];
+                const wolfHalf = 0.45;
+                const hitsTree     = laneTrees.some(tx => Math.abs(tx - newX) < wolfHalf + 0.55);
+                const hitsBuilding = laneBuildings.some(b => Math.abs(b.x - newX) < wolfHalf + b.halfW);
+                if (hitsTree || hitsBuilding) {
+                    animal.direction *= -1; // bounce back
+                } else {
+                    animal.x = newX;
+                    animal.mesh.position.x = animal.x;
+                }
                 // Player models face -Z at rotation.y=0; rotate ±90° to face along X axis
                 animal.mesh.rotation.y = animal.direction > 0 ? -Math.PI / 2 : Math.PI / 2;
                 // Bounce at patrol range boundaries

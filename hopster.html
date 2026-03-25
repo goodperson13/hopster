@@ -9,6 +9,8 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         body {
@@ -17,6 +19,7 @@
             overflow: hidden;
             font-family: Arial, sans-serif;
             background: #000;
+            -webkit-tap-highlight-color: transparent;
         }
 
         canvas {
@@ -3966,6 +3969,9 @@
         // Resume on first touch (iOS Safari requires user gesture)
         document.addEventListener('touchstart', _resumeAudioCtx, { once: true, passive: true });
         document.addEventListener('mousedown',  _resumeAudioCtx, { once: true });
+        // Prevent blue selection highlight on double-click / double-tap
+        document.addEventListener('dblclick',     e => e.preventDefault());
+        document.addEventListener('selectstart',  e => e.preventDefault());
 
         // ── SFX functions (route through _sfxGain) ───────────────────────────
         function playHopSound() {

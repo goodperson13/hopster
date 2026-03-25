@@ -4372,10 +4372,30 @@
             btn.addEventListener('click', () => applyMobileControls(btn.dataset.val));
         });
 
-        // Auto-enable on touch devices
-        if ('ontouchstart' in window) {
+        // Auto-detect mobile vs desktop
+        // Check multiple signals: touch points, UA string, and screen width
+        function _isMobileDevice() {
+            const hasTouchPoints = navigator.maxTouchPoints > 0;
+            const isMobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
+            const isNarrowScreen = window.innerWidth <= 1024;
+            // Confident mobile: UA says mobile, OR touch + narrow screen
+            return isMobileUA || (hasTouchPoints && isNarrowScreen);
+        }
+
+        let _mobileManuallySet = false;
+        // Override the mobile group click to mark as manually set
+        document.querySelectorAll('#mobileGroup .gfx-btn').forEach(btn => {
+            btn.addEventListener('click', () => { _mobileManuallySet = true; });
+        });
+
+        if (_isMobileDevice()) {
             applyMobileControls('on');
         }
+
+        // Fallback: if the user actually touches the screen, always enable
+        window.addEventListener('touchstart', () => {
+            if (!_mobileManuallySet) applyMobileControls('on');
+        }, { once: true, passive: true });
 
         // ============================================================================
         // WINDOW RESIZE

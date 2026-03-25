@@ -20,6 +20,7 @@
             font-family: Arial, sans-serif;
             background: #000;
             -webkit-tap-highlight-color: transparent;
+            touch-action: none;
         }
 
         canvas {
@@ -3972,6 +3973,9 @@
         // Prevent blue selection highlight on double-click / double-tap
         document.addEventListener('dblclick',     e => e.preventDefault());
         document.addEventListener('selectstart',  e => e.preventDefault());
+        // Prevent page scrolling / panning on swipe
+        document.addEventListener('touchmove',    e => e.preventDefault(), { passive: false });
+        document.addEventListener('touchstart',   e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
         // ── SFX functions (route through _sfxGain) ───────────────────────────
         function playHopSound() {

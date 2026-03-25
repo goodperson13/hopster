@@ -2221,14 +2221,16 @@
             const g = new THREE.Group();
             const cabMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.5, metalness: 0.25 });
             const trailerMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.7, metalness: 0.1 });
-            const cab = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.92), cabMat);
-            cab.position.set(direction * 1.9, 0.55, 0); cab.castShadow = true; g.add(cab);
-            // Cab windshield
-            const wind = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.7),
-                new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.2, metalness: 0.5 }));
-            wind.position.set(direction * 2.38, 0.72, 0); g.add(wind);
+            // Trailer: width=3.2, center at -direction*0.65 → front edge at direction*0.95
             const trailer = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.72, 0.88), trailerMat);
             trailer.position.set(-direction * 0.65, 0.5, 0); trailer.castShadow = true; g.add(trailer);
+            // Cab: width=1.1, placed flush against trailer front edge (direction*0.95 + 0.55 = direction*1.50)
+            const cab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.72, 0.92), cabMat);
+            cab.position.set(direction * 1.50, 0.55, 0); cab.castShadow = true; g.add(cab);
+            // Windshield on the front face of the cab
+            const wind = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.72),
+                new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.2, metalness: 0.5 }));
+            wind.position.set(direction * 2.04, 0.72, 0); g.add(wind);
             const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
             [direction * 1.6, direction * 0.7, -direction * 0.3, -direction * 1.4, -direction * 2.0].forEach(wx => {
                 [-0.52, 0.52].forEach(wz => {
@@ -2329,39 +2331,7 @@
 
             const isCity = _isCityTheme();
 
-            // Nature levels: 25% chance of a patrolling wolf
-            if (!isCity && _rand() < 0.25) {
-                // Pick a spawn X that doesn't overlap any upright tree or building
-                const lTrees = lane.trees || [];
-                const lBuildings = lane.buildings || [];
-                let ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
-                let axAttempts = 0;
-                while (axAttempts < 20 && (
-                    lTrees.some(tx => Math.abs(tx - ax) < 1.2) ||
-                    lBuildings.some(b => Math.abs(b.x - ax) < b.halfW + 0.6)
-                )) { ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6); axAttempts++; }
-                const animalMesh = createWolfPlayer();
-                animalMesh.position.set(ax, 0.40, lane.z);
-                scene.add(animalMesh);
-                lane.meshes.push(animalMesh);
-                const rangeHalf = 5 + _rand() * 5;
-                const initDir = _rand() > 0.5 ? 1 : -1;
-                // Player models face -Z at rotation.y=0; rotate ±90° to face along X axis
-                animalMesh.rotation.y = initDir > 0 ? -Math.PI / 2 : Math.PI / 2;
-                const animal = {
-                    x: ax, z: lane.z, laneIndex: lane.index,
-                    direction: initDir,
-                    speed: 2.0 + _rand() * 2.5,
-                    rangeMin: ax - rangeHalf,
-                    rangeMax: ax + rangeHalf,
-                    mesh: animalMesh,
-                    type: 'wolf',
-                };
-                lane.animals = lane.animals || [];
-                lane.animals.push(animal);
-                gameState.animals.push(animal);
-            }
-
+            // Place fallen trees / barriers FIRST so wolf spawn can check against them
             // Nature levels: 28% chance of a fallen tree partially blocking the lane
             // City levels:   28% chance of a construction barrier cluster
             if (_rand() < 0.28) {
@@ -2375,11 +2345,11 @@
                     ) { cx = (_rand() - 0.5) * (CONFIG.LANE_WIDTH * 0.5); ftAttempts++; }
                     // Only place if we found a clear spot
                     if (!(lane.trees || []).some(tx => Math.abs(tx - cx) < halfW + 0.8)) {
-                    const ftMesh = _buildFallenTree(cx, lane.z, halfW);
-                    scene.add(ftMesh);
-                    lane.meshes.push(ftMesh);
-                    lane.buildings = lane.buildings || [];
-                    lane.buildings.push({ x: cx, halfW });
+                        const ftMesh = _buildFallenTree(cx, lane.z, halfW);
+                        scene.add(ftMesh);
+                        lane.meshes.push(ftMesh);
+                        lane.buildings = lane.buildings || [];
+                        lane.buildings.push({ x: cx, halfW });
                     }
                 } else {
                     // 1-3 construction barriers spread across lane
@@ -2394,6 +2364,42 @@
                         lane.buildings.push({ x: bx, halfW: 0.55 });
                         lane.trees.push(bx);
                     }
+                }
+            }
+
+            // Nature levels: 25% chance of a patrolling wolf — spawned AFTER fallen trees
+            // so the overlap check sees them in lane.buildings
+            if (!isCity && _rand() < 0.25) {
+                const lTrees    = lane.trees    || [];
+                const lBuildings = lane.buildings || [];
+                let ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6);
+                let axAttempts = 0;
+                while (axAttempts < 20 && (
+                    lTrees.some(tx => Math.abs(tx - ax) < 1.2) ||
+                    lBuildings.some(b => Math.abs(b.x - ax) < b.halfW + 0.6)
+                )) { ax = (_rand() - 0.5) * (CONFIG.LANE_WIDTH - 6); axAttempts++; }
+                // Only spawn if a clear spot was found
+                if (!lTrees.some(tx => Math.abs(tx - ax) < 1.2) &&
+                    !lBuildings.some(b => Math.abs(b.x - ax) < b.halfW + 0.6)) {
+                    const animalMesh = createWolfPlayer();
+                    animalMesh.position.set(ax, 0.40, lane.z);
+                    scene.add(animalMesh);
+                    lane.meshes.push(animalMesh);
+                    const rangeHalf = 5 + _rand() * 5;
+                    const initDir = _rand() > 0.5 ? 1 : -1;
+                    animalMesh.rotation.y = initDir > 0 ? -Math.PI / 2 : Math.PI / 2;
+                    const animal = {
+                        x: ax, z: lane.z, laneIndex: lane.index,
+                        direction: initDir,
+                        speed: 2.0 + _rand() * 2.5,
+                        rangeMin: ax - rangeHalf,
+                        rangeMax: ax + rangeHalf,
+                        mesh: animalMesh,
+                        type: 'wolf',
+                    };
+                    lane.animals = lane.animals || [];
+                    lane.animals.push(animal);
+                    gameState.animals.push(animal);
                 }
             }
         }
@@ -2547,11 +2553,13 @@
 
             // Cars — speed scales with difficulty and level number
             const diff = getDifficulty(lane.index);
-            // Each level is ~22% faster than the previous one
+            // Each level is ~22% faster than the previous one (cars only, not trucks)
             const levelSpeedMult = levelConfig ? (1.0 + gameState.currentLevel * 0.22) : 1.0;
             const carCount = levelConfig ? levelConfig.carCount : (2 + Math.floor(_rand() * 2));
-            const minSpeed = levelConfig ? levelConfig.speed * 30 * levelSpeedMult : (1.5 + diff * 4.0);
-            const maxSpeed = levelConfig ? levelConfig.speed * 30 * levelSpeedMult : (2.5 + diff * 5.5);
+            const baseMinSpeed = levelConfig ? levelConfig.speed * 30 : (1.5 + diff * 4.0);
+            const baseMaxSpeed = levelConfig ? levelConfig.speed * 30 : (2.5 + diff * 5.5);
+            const minSpeed = baseMinSpeed * levelSpeedMult; // cars get the multiplier
+            const maxSpeed = baseMaxSpeed * levelSpeedMult;
             // Rich palette including metallic tones
             const carColors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6,
                                0xe67e22, 0x1abc9c, 0xe8e8e8, 0x2c3e50, 0xc0392b];
@@ -2593,7 +2601,7 @@
                     z: lane.z,
                     laneIndex: lane.index,
                     speed: isTruck
-                        ? (minSpeed + _rand() * (maxSpeed - minSpeed)) * 0.55   // trucks are slower
+                        ? (baseMinSpeed + _rand() * (baseMaxSpeed - baseMinSpeed)) * 0.55  // trucks: no level multiplier, always slower
                         : minSpeed + _rand() * (maxSpeed - minSpeed),
                     direction: laneDirection,
                     color,

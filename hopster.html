@@ -300,6 +300,29 @@
         #dpadLeft  { left: -90px;   top: 50%;  transform: translateY(-50%); }
         #dpadRight { right: -90px;  top: 50%;  transform: translateY(-50%); }
 
+        /* ── TUTORIAL HINT ── */
+        #tutHint {
+            position: fixed;
+            bottom: 38%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 14px 28px;
+            border-radius: 16px;
+            text-align: center;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s;
+            z-index: 30;
+            pointer-events: none;
+            white-space: nowrap;
+            border: 2px solid rgba(255,255,255,0.25);
+            text-shadow: 0 1px 4px #000;
+        }
+
         /* ── SHOP ── */
         #shop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -594,6 +617,8 @@
         <button id="mainMenuBtn">🏠 MAIN MENU</button>
     </div>
 
+    <div id="tutHint"></div>
+
     <div id="dpad">
         <button class="dpad-btn" id="dpadUp">↑</button>
         <button class="dpad-btn" id="dpadDown">↓</button>
@@ -607,6 +632,31 @@
         // LEVEL DEFINITIONS — each level is a fixed handcrafted map
         // ============================================================================
         const LEVELS = [
+            // ── LEVEL 0: TUTORIAL ──────────────────────────────────────────────────────
+            {
+                name: 'Tutorial',
+                emoji: '🎓',
+                tutorial: true,
+                theme: { fog: 0x87ceaa, ground: [0x172e12,0x142a10,0x1a3113], water: 0x1a6b55, road: 0x2a2a2a },
+                starThresholds: [1, 2, 3],
+                lanes: [
+                    { type: 'safe' },                                               // z=0  — start
+                    { type: 'safe' },                                               // z=-1 — move sideways
+                    { type: 'safe' },                                               // z=-2
+                    { type: 'road', speed: 0.008, direction: 1, carCount: 1 },     // z=-3 — 1 slow car
+                    { type: 'safe' },                                               // z=-4 — made it!
+                    { type: 'water', speed: 0.010, direction: -1, logCount: 3 },   // z=-5 — logs
+                    { type: 'safe' },                                               // z=-6
+                    { type: 'safe' },                                               // z=-7
+                    { type: 'finish' },                                             // z=-8
+                ],
+                coins: [
+                    { laneIndex: 1, xOffset:  0 },
+                    { laneIndex: 2, xOffset:  4 },
+                    { laneIndex: 4, xOffset: -4 },
+                ],
+            },
+            // ── LEVEL 1: FOREST TRAIL ─────────────────────────────────────────────────
             {
                 name: 'Forest Trail',
                 emoji: '🌲',
@@ -3186,6 +3236,7 @@
             if (gameState.isDead) return; // prevent double-kill
             gameState.isDead = true;
             gameState.isPlaying = false;
+            _hideTutHint();
 
             if (reason === 'squish') {
                 animatePlayerDeath('squish');
@@ -3730,6 +3781,7 @@
             if (!gameState.isPlaying) return;
             gameState.isPlaying = false;
             gameState.isDead    = false;
+            _hideTutHint();
             stopBgMusic();
             playWinSound();
             showLevelComplete(gameState.currentLevel, gameState.coinsCollected);
@@ -3844,6 +3896,8 @@
             }
             gameState.animals = [];
             if (player) player.visible = true;
+            // Reset tutorial hints for every level start
+            resetTutHints();
             camera.fov = 50;
             camera.updateProjectionMatrix();
 
@@ -4514,6 +4568,81 @@
         let _lastAutoAdjust = 0;
 
         // ============================================================================
+        // TUTORIAL HINT SYSTEM
+        // ============================================================================
+        let _tutHintTimer = null;
+        let _tutHintCurrentMsg = '';
+
+        function _showTutHint(msg, duration) {
+            const el = document.getElementById('tutHint');
+            if (!el) return;
+            // Cancel any pending hide
+            if (_tutHintTimer) { clearTimeout(_tutHintTimer); _tutHintTimer = null; }
+            if (_tutHintCurrentMsg === msg && el.style.opacity === '1') return; // already showing
+            _tutHintCurrentMsg = msg;
+            el.textContent = msg;
+            el.style.display = 'block';
+            // Force reflow so transition fires
+            el.getBoundingClientRect();
+            el.style.opacity = '1';
+            if (duration) {
+                _tutHintTimer = setTimeout(() => _hideTutHint(), duration);
+            }
+        }
+
+        function _hideTutHint() {
+            const el = document.getElementById('tutHint');
+            if (!el) return;
+            el.style.opacity = '0';
+            setTimeout(() => {
+                if (el.style.opacity === '0') { el.style.display = 'none'; _tutHintCurrentMsg = ''; }
+            }, 450);
+        }
+
+        // Tracks which tutorial hints have been shown this run
+        const _tutShown = {};
+
+        function resetTutHints() {
+            for (const k in _tutShown) delete _tutShown[k];
+            _hideTutHint();
+        }
+
+        function updateTutorialHints() {
+            if (!gameState.isLevelMode) return;
+            const lvl = LEVELS[gameState.currentLevel];
+            if (!lvl || !lvl.tutorial) return;
+
+            // playerPos.z goes negative as player moves forward
+            const pz = gameState.playerPos.z;
+
+            // Hint 1: very start — teach forward hop
+            if (!_tutShown['start'] && pz >= -0.5) {
+                _tutShown['start'] = true;
+                _showTutHint('⬆️  Press UP to hop forward!');
+            }
+            // Hint 2: after first hop — teach left/right
+            if (!_tutShown['sides'] && pz < -0.8 && pz >= -2.0) {
+                _tutShown['sides'] = true;
+                _showTutHint('⬅️ ➡️  Use LEFT & RIGHT to dodge!');
+            }
+            // Hint 3: approaching the road lane (z ≈ -2.5)
+            if (!_tutShown['road'] && pz < -2.2 && pz >= -3.0) {
+                _tutShown['road'] = true;
+                _showTutHint('🚗  Watch the cars — time your hop!');
+            }
+            // Hint 4: after crossing road, approaching water (z ≈ -4.2)
+            if (!_tutShown['water'] && pz < -4.0 && pz >= -5.2) {
+                _tutShown['water'] = true;
+                _showTutHint('🪵  Jump on the logs to cross the water!');
+            }
+            // Hint 5: made it across — approaching finish
+            if (!_tutShown['finish'] && pz < -6.5) {
+                _tutShown['finish'] = true;
+                _showTutHint('🏁  Almost there — reach the finish!', 4000);
+            }
+        }
+
+        // ============================================================================
         let lastTime = Date.now();
 
         function gameLoop() {
@@ -4530,6 +4659,7 @@
                 checkCollisions(deltaTime);
                 updateScore();
                 updatePlayerVisuals();
+                updateTutorialHints();
             }
 
 
